@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meeting Room Booking</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="container animate-fade-in">
+        <nav class="navbar">
+            <a href="index.html" class="brand">Trinidad<span style="color:var(--primary-accent)">Group</span></a>
+            <div id="nav-items">
+                <!-- Injected via JS -->
+                <a href="login.html" class="nav-link">Login: User or Admin</a>
+            </div>
+        </nav>
+
+        <header style="text-align: center; padding: 4rem 0;">
+            <h1>Book Your Meeting Room Space</h1>
+            <p class="subtitle">Premium meeting environments for high-performance teams.</p>
+        </header>
+
+        <div id="loading" style="text-align: center; margin: 4rem 0;">
+            <p class="subtitle">Connecting to Neural Network...</p>
+        </div>
+
+        <div id="room-grid" class="grid-cols-2" style="display: none;">
+            <!-- Rooms rendered by JS -->
+        </div>
+    </div> <!-- Close container -->
+
+    <!-- Firebase Compat SDKs (Required for file:// execution) -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+    <!-- Load app.js (Standard script) -->
+    <script src="app.js"></script>
+
+    <script>
+        // Standard script execution (no module)
+        async function init() {
+            const grid = document.getElementById('room-grid');
+            const loading = document.getElementById('loading');
+
+            // Wait for DataManager/Firebase to initialize
+            await new Promise(r => setTimeout(r, 500));
+
+            if (!window.DataManager) {
+                console.error("DataManager not loaded");
+                loading.textContent = "Error loading application core. Check console.";
+                return;
+            }
+
+            // Auth Listener
+            window.DataManager.initAuth((user) => {
+                const nav = document.getElementById('nav-items');
+                if (user) {
+                    nav.innerHTML = `
+                        <a href="profile.html" class="nav-link" style="color:white;">My Profile</a>
+                        ${window.DataManager.isAdmin() ? '<a href="admin.html" class="nav-link" style="color: var(--secondary-accent)">Manage Room</a>' : ''}
+                        <a href="#" onclick="window.DataManager.signOut()" class="nav-link">Logout</a>
+                    `;
+                } else {
+                    nav.innerHTML = '<a href="login.html" class="nav-link active">Login: User or Admin</a>';
+                }
+            });
+
+            try {
+                const rooms = await window.DataManager.getRooms();
+
+                loading.style.display = 'none';
+                grid.style.display = 'grid';
+
+                rooms.forEach(room => {
+                    const card = document.createElement('div');
+                    card.className = 'glass-card';
+                    card.innerHTML = `
+                        <div style="height: 150px; background: ${room.image}; border-radius: var(--radius-sm); margin-bottom: 1.5rem;"></div>
+                        <h2 style="font-size: 1.5rem; margin-bottom: 0.5rem;">${room.name}</h2>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                            <span style="color: var(--primary-accent); font-weight: 600;">${room.capacity} Seats</span>
+                            <span style="font-size: 0.9rem; color: var(--text-muted);">Available</span>
+                        </div>
+                        <p style="color: var(--text-muted); margin-bottom: 2rem;">${room.description}</p>
+                        <a href="book.html?roomId=${room.id}" class="btn btn-primary" style="width: 100%; text-align: center;">Reserve Slot</a>
+                    `;
+                    grid.appendChild(card);
+                });
+            } catch (err) {
+                console.error(err);
+                loading.textContent = "Failed to connect to cloud. Check internet connection.";
+            }
+        }
+
+        // Wait for DOM
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+
+</html>

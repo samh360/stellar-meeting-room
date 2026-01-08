@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Synapse Space</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .tabs {
+            display: flex;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .tab {
+            flex: 1;
+            padding: 1rem;
+            text-align: center;
+            cursor: pointer;
+            color: var(--text-muted);
+            transition: all 0.2s;
+        }
+
+        .tab.active {
+            color: var(--primary-accent);
+            border-bottom: 2px solid var(--primary-accent);
+            font-weight: 600;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container animate-fade-in" style="max-width: 500px; padding-top: 4rem;">
+        <nav style="text-align: center; margin-bottom: 3rem;">
+            <a href="index.html" class="brand" style="font-size: 2rem;">Trinidad<span
+                    style="color:var(--primary-accent)">Group</span></a>
+        </nav>
+
+        <div class="glass-card">
+            <div class="tabs">
+                <div class="tab active" onclick="switchTab('login')" id="tab-login">Sign In</div>
+                <div class="tab" onclick="switchTab('register')" id="tab-register">Register</div>
+            </div>
+
+            <p style="text-align: center; color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">
+                Admins: Sign in with <strong>admin@hq.com</strong> to access the dashboard.
+            </p>
+
+            <form id="auth-form">
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" required placeholder="you@hq.com">
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" required placeholder="••••••••">
+                </div>
+
+                <div id="error-msg" style="color: #ff6b6b; margin-bottom: 1rem; display: none;"></div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%;" id="submit-btn">Login to
+                    Dashboard</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Firebase Compat SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="app.js"></script>
+
+    <script>
+        let mode = 'login';
+
+        function switchTab(newMode) {
+            mode = newMode;
+            document.getElementById('tab-login').className = `tab ${mode === 'login' ? 'active' : ''}`;
+            document.getElementById('tab-register').className = `tab ${mode === 'register' ? 'active' : ''}`;
+            document.getElementById('submit-btn').textContent = mode === 'login' ? 'Login to Dashboard' : 'Create Account';
+            document.getElementById('error-msg').style.display = 'none';
+        }
+
+        document.getElementById('auth-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const btn = document.getElementById('submit-btn');
+            const originalText = btn.textContent;
+
+            btn.disabled = true;
+            btn.textContent = 'Processing...';
+
+            let result;
+            if (mode === 'login') {
+                result = await window.DataManager.signIn(email, password);
+            } else {
+                result = await window.DataManager.signUp(email, password);
+            }
+
+            if (result.success) {
+                // Redirect to home; Navbar will show Admin button if role is admin
+                window.location.href = 'index.html';
+            } else {
+                const errEl = document.getElementById('error-msg');
+                errEl.textContent = result.error;
+                errEl.style.display = 'block';
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+        });
+    </script>
+</body>
+
+</html>

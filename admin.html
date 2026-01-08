@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            color: var(--text-main);
+        }
+
+        th,
+        td {
+            text-align: left;
+            padding: 1rem;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        th {
+            color: var(--primary-accent);
+            font-weight: 600;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-muted);
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .tab {
+            padding: 1rem 2rem;
+            cursor: pointer;
+            color: var(--text-muted);
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .tab.active {
+            color: var(--primary-accent);
+            border-bottom: 3px solid var(--primary-accent);
+        }
+
+        /* Role Badges */
+        .badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 99px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .badge-admin {
+            background: rgba(255, 107, 107, 0.2);
+            color: #ff6b6b;
+        }
+
+        .badge-staff {
+            background: rgba(81, 207, 102, 0.2);
+            color: #51cf66;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container animate-fade-in">
+        <nav class="navbar">
+            <a href="index.html" class="brand">Trinidad<span style="color:var(--primary-accent)">Group</span></a>
+            <div>
+                <a href="index.html" class="nav-link">Public Site</a>
+                <span class="nav-link" style="color:var(--text-muted); cursor:default;">v2.0</span>
+                <a href="#" onclick="window.DataManager.signOut(); window.location.href='index.html'"
+                    class="nav-link">Logout</a>
+            </div>
+        </nav>
+
+        <div class="glass-card">
+            <div class="tabs">
+                <div class="tab active" onclick="switchView('bookings')" id="tab-bookings">Bookings</div>
+                <div class="tab" onclick="switchView('users')" id="tab-users">User Matrix</div>
+                <div class="tab" onclick="switchView('rooms')" id="tab-rooms">Manage Rooms</div>
+            </div>
+
+            <!-- BOOKINGS VIEW -->
+            <div id="view-bookings">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                    <h2 style="margin: 0;">All Bookings</h2>
+                    <button onclick="renderBookings()" class="btn"
+                        style="background: rgba(255,255,255,0.1);">Refresh</button>
+                </div>
+
+                <div style="overflow-x: auto;">
+                    <table id="booking-table">
+                        <thead>
+                            <tr>
+                                <th>Room</th>
+                                <th>Staff Member</th>
+                                <th>Time Slot</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="booking-body"></tbody>
+                    </table>
+                    <div id="booking-empty" class="empty-state" style="display: none;">No bookings found.</div>
+                </div>
+            </div>
+
+            <!-- USERS VIEW -->
+            <div id="view-users" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                    <h2 style="margin: 0;">User Matrix</h2>
+                    <button onclick="renderUsers()" class="btn"
+                        style="background: rgba(255,255,255,0.1);">Refresh</button>
+                </div>
+
+                <div style="overflow-x: auto;">
+                    <table id="user-table">
+                        <thead>
+                            <tr>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Joined</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="user-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ROOMS VIEW -->
+            <div id="view-rooms" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                    <h2 style="margin: 0;">Meeting Rooms</h2>
+                    <div>
+                        <button onclick="seedRooms()" id="seed-btn" class="btn"
+                            style="background:var(--primary-accent); margin-right: 0.5rem; display:none;">Seed
+                            Defaults</button>
+                        <button onclick="openRoomModal()" class="btn btn-primary">+ Add Room</button>
+                    </div>
+                </div>
+
+                <div style="overflow-x: auto;">
+                    <table id="room-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Capacity</th>
+                                <th>Description</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="room-body"></tbody>
+                    </table>
+                    <div id="room-empty" class="empty-state" style="display: none;">No rooms found in database.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ADD ROOM MODAL -->
+        <div id="add-room-modal" class="modal-overlay">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Add New Room</h2>
+                    <button class="close-modal" onclick="closeRoomModal()">&times;</button>
+                </div>
+
+                <label>Room Name</label>
+                <input type="text" id="m-name" placeholder="e.g. Stratosphere Suite">
+
+                <label>Location</label>
+                <input type="text" id="m-location" placeholder="e.g. Level 2, West Wing">
+
+                <div class="grid-cols-2" style="grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div>
+                        <label>Capacity (Pax)</label>
+                        <input type="number" id="m-capacity" placeholder="10">
+                    </div>
+                </div>
+
+                <label>Description</label>
+                <input type="text" id="m-desc" placeholder="Brief description...">
+
+                <label>Services Available</label>
+                <!-- Quick Icon Select -->
+                <div style="display:flex; gap:0.5rem; margin-bottom:0.5rem; flex-wrap:wrap;">
+                    <button class="btn"
+                        style="padding:0.3rem 0.6rem; font-size:0.8rem; background:rgba(255,255,255,0.1);"
+                        onclick="addTag('📶 WiFi')">📶 WiFi</button>
+                    <button class="btn"
+                        style="padding:0.3rem 0.6rem; font-size:0.8rem; background:rgba(255,255,255,0.1);"
+                        onclick="addTag('📺 TV Screen')">📺 TV Screen</button>
+                    <button class="btn"
+                        style="padding:0.3rem 0.6rem; font-size:0.8rem; background:rgba(255,255,255,0.1);"
+                        onclick="addTag('📽️ Projector')">📽️ Projector</button>
+                    <button class="btn"
+                        style="padding:0.3rem 0.6rem; font-size:0.8rem; background:rgba(255,255,255,0.1);"
+                        onclick="addTag('☕ Coffee')">☕ Coffee</button>
+                    <button class="btn"
+                        style="padding:0.3rem 0.6rem; font-size:0.8rem; background:rgba(255,255,255,0.1);"
+                        onclick="addTag('❄️ AC')">❄️ AC</button>
+                </div>
+
+                <div class="tag-container" id="tag-list">
+                    <!-- Tags will appear here -->
+                </div>
+                <div class="input-group">
+                    <input type="text" id="tag-input" placeholder="Custom service...">
+                    <button class="btn btn-primary" onclick="addTag()">+</button>
+                </div>
+
+                <button class="btn btn-primary" onclick="submitRoom()" style="width: 100%; margin-top: 2rem;">Create
+                    Room</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase Compat SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="app.js?v=2.0"></script>
+
+    <script>
+        function formatTime(isoStr) {
+            return new Date(isoStr).toLocaleString('en-US', {
+                month: 'short', day: 'numeric',
+                hour: 'numeric', minute: '2-digit'
+            });
+        }
+
+        // --- TABS LOGIC ---
+        function switchView(view) {
+            ['bookings', 'users', 'rooms'].forEach(v => {
+                document.getElementById(`view-${v}`).style.display = (view === v) ? 'block' : 'none';
+                document.getElementById(`tab-${v}`).className = `tab ${view === v ? 'active' : ''}`;
+            });
+
+            if (view === 'bookings') renderBookings();
+            if (view === 'users') renderUsers();
+            if (view === 'rooms') renderRooms();
+        }
+
+        // --- BOOKINGS LOGIC ---
+        async function renderBookings() {
+            if (!window.DataManager) return;
+            const tbody = document.getElementById('booking-body');
+            const empty = document.getElementById('booking-empty');
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Loading...</td></tr>';
+
+            try {
+                const [bookings, rooms] = await Promise.all([
+                    window.DataManager.getBookings(),
+                    window.DataManager.getRooms()
+                ]);
+
+                tbody.innerHTML = '';
+                if (bookings.length === 0) {
+                    empty.style.display = 'block'; return;
+                }
+                empty.style.display = 'none';
+
+                bookings.sort((a, b) => new Date(b.startTime) - new Date(a.startTime));
+
+                bookings.forEach(booking => {
+                    const room = rooms.find(r => r.id === booking.roomId);
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${room ? room.name : 'Unknown Room'}</td>
+                        <td>${booking.user}</td>
+                        <td>${formatTime(booking.startTime)} - ${formatTime(booking.endTime).split(', ')[1]}</td>
+                        <td><button class="btn btn-danger" onclick="cancelBooking('${booking.id}')" style="padding: 0.4rem 1rem; font-size: 0.8rem;">Cancel</button></td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                console.error(err);
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color: #ff6b6b;">Error loading bookings.</td></tr>';
+            }
+        }
+
+        async function cancelBooking(id) {
+            if (confirm('Cancel this booking?')) {
+                await window.DataManager.deleteBooking(id);
+                renderBookings();
+            }
+        }
+
+        // --- USERS LOGIC ---
+        async function renderUsers() {
+            const tbody = document.getElementById('user-body');
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Loading matrix...</td></tr>';
+            try {
+                const users = await window.DataManager.getUsers();
+                tbody.innerHTML = '';
+                users.sort((a, b) => (a.role === 'admin' ? -1 : 1));
+
+                users.forEach(user => {
+                    const isSelf = window.DataManager.auth_state.uid === user.uid;
+                    const date = user.createdAt ? new Date(user.createdAt.seconds * 1000).toLocaleDateString() : 'N/A';
+                    let actions = !isSelf
+                        ? (user.role === 'staff'
+                            ? `<button onclick="changeRole('${user.uid}', 'admin')" class="btn" style="background:var(--primary-accent); padding:0.3rem 0.8rem; font-size:0.8rem;">Make Admin</button>`
+                            : `<button onclick="changeRole('${user.uid}', 'staff')" class="btn btn-danger" style="padding:0.3rem 0.8rem; font-size:0.8rem;">Revoke Admin</button>`)
+                        : '<span style="color:var(--text-muted); font-size:0.8rem;">(You)</span>';
+
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `<td>${user.email}</td><td><span class="badge badge-${user.role}">${user.role.toUpperCase()}</span></td><td>${date}</td><td>${actions}</td>`;
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                console.error(err);
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color: #ff6b6b;">Error loading users.</td></tr>';
+            }
+        }
+
+        async function changeRole(uid, newRole) {
+            if (confirm(`Change user role to ${newRole}?`)) {
+                await window.DataManager.updateUserRole(uid, newRole);
+                renderUsers();
+            }
+        }
+
+        // --- ROOMS LOGIC ---
+        async function renderRooms() {
+            const tbody = document.getElementById('room-body');
+            const empty = document.getElementById('room-empty');
+            const seedBtn = document.getElementById('seed-btn');
+
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Loading rooms...</td></tr>';
+
+            try {
+                const rooms = await window.DataManager.getRooms();
+                tbody.innerHTML = '';
+
+                if (rooms.length === 0) {
+                    empty.style.display = 'block';
+                    seedBtn.style.display = 'inline-block'; // Show seed button
+                    return;
+                }
+                empty.style.display = 'none';
+                seedBtn.style.display = 'none';
+
+                rooms.forEach(room => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${room.name}</td>
+                        <td>${room.capacity}</td>
+                        <td>${room.description}</td>
+                        <td>
+                            <button onclick="deleteRoom('${room.id}')" class="btn btn-danger" style="padding: 0.4rem 1rem; font-size: 0.8rem;">Delete</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                console.error(err);
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color: #ff6b6b;">Error loading rooms.</td></tr>';
+            }
+        }
+
+        async function seedRooms() {
+            if (confirm("This will add the 4 default rooms to the database. Proceed?")) {
+                await window.DataManager.seedRooms();
+                renderRooms();
+            }
+        }
+
+        // --- MODAL LOGIC ---
+        let currentTags = [];
+
+        function openRoomModal() {
+            document.getElementById('add-room-modal').classList.add('active');
+            currentTags = [];
+            renderTags();
+        }
+
+        function closeRoomModal() {
+            document.getElementById('add-room-modal').classList.remove('active');
+        }
+
+        function addTag(presetValue) {
+            const input = document.getElementById('tag-input');
+            const val = presetValue || input.value.trim();
+            if (val && !currentTags.includes(val)) {
+                currentTags.push(val);
+                renderTags();
+                input.value = '';
+            }
+        }
+
+        function removeTag(tag) {
+            currentTags = currentTags.filter(t => t !== tag);
+            renderTags();
+        }
+
+        function renderTags() {
+            const container = document.getElementById('tag-list');
+            container.innerHTML = currentTags.map(tag => `
+                <div class="tag">
+                    ${tag}
+                    <span class="tag-remove" onclick="removeTag('${tag}')">&times;</span>
+                </div>
+            `).join('');
+        }
+
+        async function submitRoom() {
+            const name = document.getElementById('m-name').value;
+            const location = document.getElementById('m-location').value;
+            const capacity = document.getElementById('m-capacity').value;
+            const desc = document.getElementById('m-desc').value;
+
+            // Auto-generate nice gradient since we removed the input
+            const colors = ['#FF9A9E', '#a1c4fd', '#cfd9df', '#434343', '#f6d365', '#667eea', '#764ba2'];
+            const randomColor = colors[Math.floor(Math.random() * colors.length)];
+            const image = `linear-gradient(45deg, ${randomColor} 0%, #2a2a2a 100%)`;
+
+            if (!name || !capacity) {
+                alert("Please fill in Name and Capacity.");
+                return;
+            }
+
+            await window.DataManager.addRoom({
+                name,
+                location: location || 'Headquarters',
+                capacity: parseInt(capacity),
+                description: desc || 'Premium Meeting Space',
+                image,
+                services: currentTags
+            });
+
+            closeRoomModal();
+            renderRooms();
+
+            // Reset form
+            document.getElementById('m-name').value = '';
+            document.getElementById('m-location').value = '';
+            document.getElementById('m-capacity').value = '';
+            document.getElementById('m-desc').value = '';
+            currentTags = [];
+            renderTags();
+        }
+
+        async function deleteRoom(id) {
+            if (confirm("Delete this room permanently?")) {
+                await window.DataManager.deleteRoom(id);
+                renderRooms();
+            }
+        }
+
+        // --- INIT ---
+        document.addEventListener('DOMContentLoaded', async () => {
+            await new Promise(r => setTimeout(r, 500));
+            if (!window.DataManager) return;
+
+            window.DataManager.initAuth((user) => {
+                // Case 1: Not logged in at all -> Go to Login
+                if (!user) {
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                // Case 2: Logged in but NOT Admin -> Access Denied
+                if (!window.DataManager.isAdmin()) {
+                    alert(`Access Denied: Admins Only.\n\nLogged in as: ${user.email}\nRole: ${user.role}`);
+                    window.location.href = 'index.html';
+                    return;
+                }
+
+                // Case 3: Admin -> Show Dashboard
+                renderBookings();
+            });
+        });
+
+        // Expose globals
+        window.switchView = switchView;
+        window.renderBookings = renderBookings;
+        window.renderUsers = renderUsers;
+        window.renderRooms = renderRooms;
+        window.cancelBooking = cancelBooking;
+        window.changeRole = changeRole;
+        window.seedRooms = seedRooms;
+        window.addRoomPrompt = addRoomPrompt;
+        window.deleteRoom = deleteRoom;
+
+    </script>
+</body>
+
+</html>

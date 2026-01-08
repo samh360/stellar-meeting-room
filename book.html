@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reserve Room</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="container animate-fade-in">
+        <nav class="navbar">
+            <a href="index.html" class="brand">Trinidad<span style="color:var(--primary-accent)">Group</span></a>
+            <a href="index.html" class="nav-link">← Back to Rooms</a>
+        </nav>
+
+        <div class="glass-card" style="max-width: 600px; margin: 2rem auto;">
+            <div id="loader" style="text-align: center;">Checking access...</div>
+
+            <div id="content" style="display: none;">
+                <h1 id="room-name" style="margin-bottom: 0.5rem; font-size: 2rem;">Loading...</h1>
+                <p id="room-desc" class="subtitle" style="margin-bottom: 2rem;">Please verify your details below.</p>
+
+                <form id="booking-form">
+                    <input type="hidden" id="roomId">
+
+                    <label for="userName">Staff Email (Auto-filled)</label>
+                    <input type="text" id="userName" required readonly style="opacity: 0.7; cursor: not-allowed;">
+
+                    <div class="grid-cols-2" style="gap: 1rem;">
+                        <div>
+                            <label for="date">Date</label>
+                            <input type="date" id="date" required>
+                        </div>
+                        <!-- Time slots could be complex, keeping it simple for v1 -->
+                    </div>
+
+                    <div class="grid-cols-2" style="gap: 1rem;">
+                        <div>
+                            <label for="startTime">Start Time</label>
+                            <input type="time" id="startTime" required>
+                        </div>
+                        <div>
+                            <label for="endTime">End Time</label>
+                            <input type="time" id="endTime" required>
+                        </div>
+                    </div>
+
+                    <div id="error-msg" style="color: #ff6b6b; margin-bottom: 1rem; display: none;"></div>
+
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">Confirm Booking</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase Compat SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="app.js"></script>
+
+    <script>
+        // Parse URL params
+        const params = new URLSearchParams(window.location.search);
+        const roomId = params.get('roomId');
+
+        async function init() {
+            await new Promise(r => setTimeout(r, 500));
+
+            if (!window.DataManager) return;
+
+            // Auth Guard
+            window.DataManager.initAuth(async (user) => {
+                if (!user) {
+                    // Redirect to login with return URL logic (simplified for now)
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                document.getElementById('loader').style.display = 'none';
+                document.getElementById('content').style.display = 'block';
+                document.getElementById('userName').value = user.email;
+
+                const room = await window.DataManager.getRoom(roomId);
+                if (!room) {
+                    alert('Room not found!');
+                    window.location.href = 'index.html';
+                    return;
+                }
+
+                document.getElementById('room-name').textContent = `Book: ${room.name}`;
+                document.getElementById('room-desc').textContent = room.description;
+                document.getElementById('roomId').value = roomId;
+
+                // Set default date to today
+                document.getElementById('date').valueAsDate = new Date();
+            });
+        }
+
+        // Wait for script load
+        document.addEventListener('DOMContentLoaded', init);
+
+        document.getElementById('booking-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button[type="submit"]');
+            const originalText = btn.textContent;
+
+            // Loading State
+            btn.disabled = true;
+            btn.textContent = 'Verifying Slot...';
+            document.getElementById('error-msg').style.display = 'none';
+
+            const date = document.getElementById('date').value;
+            const startParams = document.getElementById('startTime').value;
+            const endParams = document.getElementById('endTime').value;
+
+            // Construct ISO strings
+            const startTime = `${date}T${startParams}`;
+            const endTime = `${date}T${endParams}`;
+
+            if (startTime >= endTime) {
+                showError('End time must be after start time.');
+                btn.disabled = false;
+                btn.textContent = originalText;
+                return;
+            }
+
+            try {
+                const result = await window.DataManager.addBooking({
+                    roomId,
+                    user: document.getElementById('userName').value, // Using email now
+                    startTime,
+                    endTime
+                });
+
+                if (result.success) {
+                    alert('Booking Confirmed!');
+                    window.location.href = 'index.html';
+                } else {
+                    showError(result.error);
+                    btn.disabled = false;
+                    btn.textContent = originalText;
+                }
+            } catch (err) {
+                showError('Network error. Please try again.');
+                console.error(err);
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+        });
+
+        function showError(msg) {
+            const el = document.getElementById('error-msg');
+            el.textContent = msg;
+            el.style.display = 'block';
+        }
+    </script>
+</body>
+
+</html>

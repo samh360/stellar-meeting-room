@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile - Trinidad Group</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .profile-header {
+            text-align: center;
+            padding: 3rem 0;
+            border-bottom: 1px solid var(--glass-border);
+            margin-bottom: 2rem;
+        }
+
+        .section-title {
+            color: var(--primary-accent);
+            margin-bottom: 1.5rem;
+            font-size: 1.5rem;
+        }
+
+        .booking-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            border: 1px solid var(--glass-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .booking-info h3 {
+            margin: 0 0 0.5rem 0;
+            font-size: 1.2rem;
+        }
+
+        .booking-info p {
+            margin: 0;
+            color: var(--text-muted);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container animate-fade-in">
+        <nav class="navbar">
+            <a href="index.html" class="brand">Trinidad<span style="color:var(--primary-accent)">Group</span></a>
+            <div id="nav-links">
+                <!-- Loaded by JS -->
+            </div>
+        </nav>
+
+        <div class="profile-header">
+            <h1 id="user-email">Loading...</h1>
+            <p style="color: var(--text-muted);">Staff Member</p>
+        </div>
+
+        <div class="glass-card">
+            <h2 class="section-title">Upcoming Bookings</h2>
+            <div id="upcoming-list"></div>
+        </div>
+
+        <div class="glass-card" style="margin-top: 2rem; opacity: 0.8;">
+            <h2 class="section-title">Past History</h2>
+            <div id="past-list"></div>
+        </div>
+    </div>
+
+    <!-- Firebase Compat SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="app.js"></script>
+
+    <script>
+        function formatTime(isoStr) {
+            return new Date(isoStr).toLocaleString('en-US', {
+                weekday: 'short', month: 'short', day: 'numeric',
+                hour: 'numeric', minute: '2-digit'
+            });
+        }
+
+        async function renderProfile(user) {
+            document.getElementById('user-email').textContent = user.email;
+
+            try {
+                const [bookings, rooms] = await Promise.all([
+                    window.DataManager.getUserBookings(user.email),
+                    window.DataManager.getRooms()
+                ]);
+
+                const now = new Date().toISOString();
+                const upcoming = bookings.filter(b => b.startTime >= now).sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+                const past = bookings.filter(b => b.startTime < now).sort((a, b) => new Date(b.startTime) - new Date(a.startTime));
+
+                renderList('upcoming-list', upcoming, rooms, true);
+                renderList('past-list', past, rooms, false);
+
+            } catch (err) {
+                console.error(err);
+                document.getElementById('upcoming-list').innerHTML = '<p class="empty-state">Error loading bookings.</p>';
+            }
+        }
+
+        function renderList(elementId, bookingList, rooms, isUpcoming) {
+            const container = document.getElementById(elementId);
+            if (bookingList.length === 0) {
+                container.innerHTML = '<p class="empty-state">No bookings found.</p>';
+                return;
+            }
+
+            container.innerHTML = bookingList.map(b => {
+                const room = rooms.find(r => r.id === b.roomId);
+                const roomName = room ? room.name : 'Unknown Room';
+                const timeStr = `${formatTime(b.startTime)} - ${new Date(b.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+
+                return `
+                    <div class="booking-card">
+                        <div class="booking-info">
+                            <h3>${roomName}</h3>
+                            <p>${timeStr}</p>
+                        </div>
+                        ${isUpcoming ? `<button onclick="cancelBooking('${b.id}')" class="btn btn-danger" style="padding:0.5rem 1rem;">Cancel</button>` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function cancelBooking(id) {
+            if (confirm("Cancel this booking?")) {
+                await window.DataManager.deleteBooking(id);
+                window.location.reload();
+            }
+        }
+
+        window.cancelBooking = cancelBooking;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Wait for global init
+            await new Promise(r => setTimeout(r, 500));
+
+            window.DataManager.initAuth((user) => {
+                if (!user) {
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                // Render Correct Navigation
+                const nav = document.getElementById('nav-links');
+                nav.innerHTML = `
+                    <a href="index.html" class="nav-link">Book Room</a>
+                    ${window.DataManager.isAdmin() ? '<a href="admin.html" class="nav-link" style="color: var(--secondary-accent)">Manage Room</a>' : ''}
+                    <a href="#" onclick="window.DataManager.signOut(); window.location.href='index.html'" class="nav-link">Logout</a>
+                `;
+
+                renderProfile(user);
+            });
+        });
+    </script>
+</body>
+
+</html>
