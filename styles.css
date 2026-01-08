@@ -59,8 +59,8 @@ body {
 /* Glass Card */
 .glass-card {
   background: var(--glass-bg);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--glass-shadow);
@@ -86,7 +86,8 @@ h3 {
 
 h1 {
   font-size: 3rem;
-  background: linear-gradient(to right, #fff, #a5a5a5);
+  background: linear-gradient(to right, #1a202c, #4a5568);
+  /* Dark Slate Gradient */
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   margin-bottom: 2rem;
@@ -144,7 +145,7 @@ h1 {
 .brand {
   font-size: 1.5rem;
   font-weight: 800;
-  color: white;
+  color: var(--text-main);
   text-decoration: none;
   letter-spacing: -1px;
 }
@@ -169,20 +170,22 @@ select {
   width: 100%;
   padding: 0.75rem;
   margin-bottom: 1rem;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.8);
+  /* Light input */
+  border: 1px solid #e2e8f0;
   border-radius: var(--radius-md);
-  color: white;
+  color: var(--text-main);
   font-family: inherit;
   font-size: 1rem;
-  transition: border-color 0.2s;
+  transition: all 0.2s;
 }
 
 input:focus,
 select:focus {
   outline: none;
   border-color: var(--primary-accent);
-  background: rgba(0, 0, 0, 0.5);
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.2);
 }
 
 label {
@@ -241,12 +244,9 @@ label {
 }
 
 .modal-content {
-  background: #1a1a2e;
-  /* Fallback */
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+  background: white;
   backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid white;
   padding: 1.5rem;
   border-radius: var(--radius-lg);
   width: 90%;
@@ -255,7 +255,7 @@ label {
   /* Ensure it fits on screen */
   overflow-y: auto;
   /* Scroll if too tall */
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   transform: translateY(20px);
   transition: transform 0.3s ease;
 }
@@ -271,21 +271,21 @@ label {
   position: sticky;
   top: -1.5rem;
   z-index: 10;
-  background: #0f0c29;
-  /* Solid Dark Background */
+  background: rgba(255, 255, 255, 0.95);
+  /* Opaque white */
+  backdrop-filter: blur(10px);
   margin: -1.5rem -1.5rem 1rem -1.5rem;
   /* Stretch relative to parent padding */
   padding: 1rem 1.5rem;
-  border-bottom: 1px solid var(--glass-border);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
 
 .modal-header h2 {
   margin: 0;
   font-size: 1.5rem;
-  color: white;
-  /* Ensure visibility */
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  color: var(--text-main);
+  text-shadow: none;
 }
 
 .close-modal {
